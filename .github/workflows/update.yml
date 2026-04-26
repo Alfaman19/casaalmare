@@ -1,4 +1,4 @@
-name: Auto IPTV Playlist
+name: Auto IPTV Playlist Stable
 
 on:
   schedule:
@@ -10,29 +10,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Installa jq
-        run: sudo apt-get install jq -y
-
       - name: Genera playlist
         run: |
           echo "#EXTM3U" > playlist.m3u
 
           API="https://api.github.com/repos/sahind01/mutcats/contents/selcuk"
 
-          FILES=$(curl -s $API | jq -r '.[] | select(.name | endswith(".m3u8")) | .name')
+          echo "Scarico lista file..."
+
+          curl -s $API > files.json
+
+          FILES=$(cat files.json | grep -o '"name": *"[^"]*\.m3u8"' | cut -d'"' -f4)
+
+          if [ -z "$FILES" ]; then
+            echo "Nessun file trovato"
+            exit 0
+          fi
 
           for file in $FILES
           do
             NAME=$(echo $file | sed 's/.m3u8//g' | sed 's/-/ /g')
+            URL="https://raw.githubusercontent.com/sahind01/mutcats/main/selcuk/$file"
+
             echo "#EXTINF:-1,$NAME" >> playlist.m3u
-            echo "https://raw.githubusercontent.com/sahind01/mutcats/main/selcuk/$file" >> playlist.m3u
+            echo "$URL" >> playlist.m3u
           done
 
-      - name: Upload playlist (FIX senza git push)
+      - name: Upload playlist
         uses: actions/upload-artifact@v4
         with:
           name: playlist
           path: playlist.m3u
+  
+  
+  
+  
